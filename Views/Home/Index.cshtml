@@ -1,0 +1,502 @@
+﻿<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<!-- Cambié la forma de incluir Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/popper.js@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<!-- SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.2/xlsx.full.min.js"></script>
+
+<main>
+    <section class="row" aria-labelledby="aspnetTitle">
+        <h1 id="aspnetTitle">ASP.NET</h1>
+        <!-- Button trigger modal -->
+        <section class="row" aria-labelledby="aspnetTitle">
+
+            <div class="d-flex justify-content-end">
+                <!-- Button trigger modal -->
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                        <i class="bi bi-person-add"></i> Nuevo Usuario
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start">
+                <button type="button" class="btn btn-success" id="exportButton">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Exportar a Excel
+                </button>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <form class="d-flex" role="search" onsubmit="return buscarUsuarios()">
+                    <input id="txtBusqueda" class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+            </div>
+        </section>
+    </section>
+    <div class="row">
+
+        @model List<WebApplication1.Models.Usuarios>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Rut</th>
+                    <th>Correo</th>
+                    <th>Fecha de Nacimiento</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaUsuarios">
+                @if (Model != null)
+                {
+                    foreach (var usuario in Model)
+                    {
+                        <tr>
+                            <td>@usuario.Id</td>
+                            <td>@usuario.Nombre</td>
+                            <td>@usuario.Rut</td>
+                            <td>@usuario.Correo</td>
+                            <td>@usuario.FechaNacimiento.ToShortDateString()</td>
+                            <td>
+                                <button type="button" class="btn btn-warning" onclick="editarUsuario(@usuario.Id)">Editar</button>
+                                <button type="button" class="btn btn-danger" onclick="eliminarUsuario(@usuario.Id)">Eliminar</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6">Los datos estan cargando ... espere por favor.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Modal inicio-->
+<!-- Modal para Editar Usuario -->
+<div class="modal fade" id="modalUsuario" tabindex="-1" role="dialog" aria-labelledby="modalUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalUsuarioLabel">Editar Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para Editar Usuario -->
+                <form id="formularioUsuario">
+                    <input type="hidden" id="usuarioId" />
+
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre:</label>
+                        <input type="text" class="form-control" id="nombre" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rut" class="form-label">Rut:</label>
+                        <input type="text" class="form-control" id="rut" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="correo" class="form-label">Correo:</label>
+                        <input type="text" class="form-control" id="correo" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fechaNacimiento" class="form-label">Fecha de Nacimiento:</label>
+                        <input type="date" class="form-control" id="fechaNacimiento" required />
+                    </div>
+
+                    <button type="button" class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end">
+    <nav aria-label="Page navigation example">
+        <ul class="pagination">
+            <li class="page-item"><a class="page-link" href="#" onclick="cargarDatosPaginacion(1, 5)">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="#" onclick="cargarDatosPaginacion(1, 5)">1</a></li>
+            <li class="page-item"><a class="page-link" href="#" onclick="cargarDatosPaginacion(2, 5)">2</a></li>
+            <li class="page-item"><a class="page-link" href="#" onclick="cargarDatosPaginacion(3, 5)">3</a></li>
+            <!-- Agrega más botones según sea necesario -->
+            <li class="page-item"><a class="page-link" href="#" onclick="cargarDatosPaginacion(2, 5)">Next</a></li>
+        </ul>
+    </nav>
+</div>
+
+
+<script>
+    // Función para cargar datos en la tabla con paginación
+    function cargarDatosPaginacion(page, pageSize) {
+        $.ajax({
+            url: `/api/Usuarios/Page?page=${page}&pageSize=${pageSize}`,
+            type: 'GET',
+            success: function (data) {
+                actualizarTabla(data);
+            },
+            error: function (error) {
+                console.error('Error al cargar datos:', error);
+            }
+        });
+    }
+
+    // Resto del script...
+</script>
+
+
+<!-- Modal Final-->
+<!--Modal Nuevo Usuario-->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Ingresar Nuevo Usuario</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoUsuario">
+                    <div class="mb-3">
+                        <label for="Id_Nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="Id_Nombre" aria-describedby="emailHelp" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Id_Rut" class="form-label">Rut</label>
+                        <input type="text" class="form-control" id="Id_Rut" aria-describedby="emailHelp" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Id_Mail" class="form-label">Correo</label>
+                        <input type="email" class="form-control" id="Id_Mail" aria-describedby="emailHelp">
+                    </div>
+                    <div class="mb-3">
+                        <label for="ReleaseDate" class="form-label">Fecha de Nacimiento</label><br>
+                        <input class="datefield form-control" data-val="true" data-val-required="Date is required"
+                               id="ReleaseDate" name="ReleaseDate" type="date" value="11/11/1989" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="ingresarUsuario()">Ingresar Usuario</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Modal final Nuevo usuario-->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<script>
+
+    // Función para cargar datos en la tabla
+    function cargarDatos() {
+        $.ajax({
+            url: '/api/Usuarios',
+            type: 'GET',
+            success: function (data) {
+                actualizarTabla(data);
+            },
+            error: function (error) {
+                console.error('Error al cargar datos:', error);
+            }
+        });
+    }
+</script>
+<script>
+    // Función para actualizar la tabla con nuevos datos
+    function actualizarTabla(data) {
+        var tabla = $('#tablaUsuarios');
+        tabla.empty(); // Limpiar la tabla antes de agregar nuevos datos
+
+        $.each(data, function (index, usuario) {
+            tabla.append(`
+                        <tr>
+                            <td>${usuario.Id}</td>
+                            <td>${usuario.Nombre}</td>
+                            <td>${usuario.Rut}</td>
+                            <td>${usuario.Correo}</td>
+                            <td>${usuario.FechaNacimiento}</td>
+                            <td>
+                                <button type="button" class="btn btn-warning" onclick="editarUsuario(${usuario.Id})">Editar</button>
+                                <button type="button" class="btn btn-danger" onclick="eliminarUsuario(${usuario.Id})">Eliminar</button>
+                            </td>
+                        </tr>
+                    `);
+        });
+    }
+</script>
+<script>
+    // Función para abrir el modal y preparar para insertar un nuevo usuario
+    function abrirModalInsertar() {
+        $('#usuarioId').val(''); // Limpiar el campo de ID
+        $('#nombre').val('');
+        $('#rut').val('');
+        $('#correo').val('');
+        $('#fechaNacimiento').val('');
+
+        $('#modalUsuario').modal('show');
+    }
+</script>
+<script>
+    // Función para abrir el modal y cargar datos para editar un usuario
+    function editarUsuario(id) {
+        // Realizar una solicitud GET a la API para obtener datos del usuario por ID
+        $.ajax({
+            url: `/api/Usuarios/${id}`,
+            type: 'GET',
+            success: function (usuario) {
+                // Cargar datos del usuario en el formulario
+                $('#usuarioId').val(usuario.Id);
+                $('#nombre').val(usuario.Nombre);
+                $('#rut').val(usuario.Rut);
+                $('#correo').val(usuario.Correo);
+                $('#fechaNacimiento').val(usuario.FechaNacimiento);
+
+                // Abrir el modal
+                $('#modalUsuario').modal('show');
+            },
+            error: function (error) {
+                console.error('Error al obtener datos del usuario:', error);
+            }
+        });
+    }
+</script>
+<script>
+    // Función para guardar un nuevo usuario o actualizar uno existente
+    function guardarUsuario() {
+        var id = $('#usuarioId').val();
+        var nombre = $('#nombre').val();
+        var rut = $('#rut').val();
+        var correo = $('#correo').val();
+        var fechaNacimiento = $('#fechaNacimiento').val();
+
+        // Crear un objeto con los datos del usuario
+        var usuario = {
+            Id: id,
+            Nombre: nombre,
+            Rut: rut,
+            Correo: correo,
+            FechaNacimiento: fechaNacimiento
+        };
+
+        // Determinar si es una operación de inserción o actualización
+        var tipoOperacion = id ? 'PUT' : 'POST';
+        var urlOperacion = id ? `/api/Usuarios/${id}` : '/api/Usuarios';
+
+        // Realizar la solicitud AJAX para insertar o actualizar el usuario
+        $.ajax({
+            url: urlOperacion,
+            type: tipoOperacion,
+            contentType: 'application/json',
+            data: JSON.stringify(usuario),
+            success: function () {
+                // Cerrar el modal y recargar la tabla con los nuevos datos
+                $('#modalUsuario').modal('hide');
+                cargarDatos();
+            },
+            error: function (error) {
+                console.error('Error al guardar usuario:', error);
+            }
+        });
+    }
+</script>
+<script>
+    // Función para eliminar un usuario
+    function eliminarUsuario(id) {
+        // Realizar la solicitud AJAX para eliminar el usuario
+        $.ajax({
+            url: `/api/Usuarios/${id}`,
+            type: 'DELETE',
+            success: function () {
+                // Recargar la tabla con los datos actualizados
+                cargarDatos();
+            },
+            error: function (error) {
+                console.error('Error al eliminar usuario:', error);
+            }
+        });
+    }
+
+    // Cargar datos cuando la página se cargue
+    $(document).ready(function () {
+        cargarDatos();
+    });
+</script>
+<script>
+    function ingresarUsuario() {
+        // Obtener los valores del formulario
+        var nombre = $('#Id_Nombre').val();
+        var rut = $('#Id_Rut').val();
+        var correo = $('#Id_Mail').val();
+        var fechaNacimiento = $('#ReleaseDate').val();
+
+        // Crear un objeto con los datos del nuevo usuario
+        var nuevoUsuario = {
+            Nombre: nombre,
+            Rut: rut,
+            Correo: correo,
+            FechaNacimiento: fechaNacimiento
+        };
+
+        // Realiza la solicitud AJAX para agregar un nuevo usuario
+        $.ajax({
+            url: '/api/Usuarios',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(nuevoUsuario),
+            success: function () {
+                // Cierra el modal y recargar la tabla con los nuevos datos
+                $('#exampleModal').modal('hide');
+                cargarDatos();
+            },
+            error: function (error) {
+                console.error('Error al agregar usuario:', error);
+            }
+        });
+    }
+</script>
+<script>
+    function ingresarUsuario() {
+        var nombre = $('#Id_Nombre').val();
+        var rut = $('#Id_Rut').val();
+        var correo = $('#Id_Mail').val();
+        var fechaNacimiento = $('#ReleaseDate').val();
+
+        var nuevoUsuario = {
+            Nombre: nombre,
+            Rut: rut,
+            Correo: correo,
+            FechaNacimiento: fechaNacimiento
+        };
+
+        $.ajax({
+            url: '/api/Usuarios',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(nuevoUsuario),
+            success: function (data) {
+                console.log('Respuesta del servidor:', data);
+                // Aquí puedes realizar acciones adicionales después de agregar el usuario
+            },
+            error: function (error) {
+                console.error('Error al agregar usuario:', error);
+            }
+        });
+    }
+</script>
+
+
+<div class="container mt-5">
+    <form id="formNuevoUsuario">
+        <div class="form-group">
+            <label for="Id_Nombre">Nombre:</label>
+            <input type="text" class="form-control" id="Id_Nombre" required>
+        </div>
+        <div class="form-group">
+            <label for="Id_Rut">Rut:</label>
+            <input type="text" class="form-control" id="Id_Rut" required>
+        </div>
+        <div class="form-group">
+            <label for="Id_Mail">Correo:</label>
+            <input type="email" class="form-control" id="Id_Mail">
+        </div>
+        <div class="form-group">
+            <label for="ReleaseDate">Fecha de Nacimiento:</label>
+            <input type="date" class="form-control" id="ReleaseDate" required>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="ingresarUsuario()">Ingresar Usuario</button>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#exportButton").on("click", function () {
+            $.ajax({
+                url: "/api/Usuarios/ExportToExcel",
+                type: "GET",
+                xhrFields: {
+                    responseType: 'blob' // Estableco el tipo de respuesta a blob
+                },
+                success: function (data) {
+                    var blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                    var url = window.URL.createObjectURL(blob);
+
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Usuarios.xlsx";
+                    document.body.appendChild(a);
+                    a.click();
+
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                },
+                error: function (error) {
+                    console.error("Error al exportar a Excel:", error);
+                }
+            });
+        });
+    });
+</script>
+
+<script>
+    function buscarUsuarios() {
+        var searchTerm = document.getElementById("txtBusqueda").value;
+
+        fetch('api/Usuarios/Search?term=' + searchTerm, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Resultados de búsqueda:', data);
+                //aqui yo Actualizo la tabla con los resultados de búsqueda
+                actualizarTablaUsuarios(data);
+            })
+            .catch(error => {
+                console.error('Error al realizar la búsqueda:', error);
+            });
+
+        // Evitar que el formulario se envíe
+        return false;
+    }
+
+    function actualizarTablaUsuarios(usuarios) {
+        var tablaUsuarios = document.getElementById("tablaUsuarios");
+        tablaUsuarios.innerHTML = ""; // Limpiar la tabla antes de agregar los nuevos resultados
+
+        if (usuarios && usuarios.length > 0) {
+            for (var i = 0; i < usuarios.length; i++) {
+                var usuario = usuarios[i];
+                var nuevaFila = '<tr>' +
+                    '<td>' + usuario.Id + '</td>' +
+                    '<td>' + usuario.Nombre + '</td>' +
+                    '<td>' + usuario.Rut + '</td>' +
+                    '<td>' + usuario.Correo + '</td>' +
+                    '<td>' + new Date(usuario.FechaNacimiento).toLocaleDateString() + '</td>' +
+                    '<td>' +
+                    '<button type="button" class="btn btn-warning" onclick="editarUsuario(' + usuario.Id + ')">Editar</button>' +
+                    '<button type="button" class="btn btn-danger" onclick="eliminarUsuario(' + usuario.Id + ')">Eliminar</button>' +
+                    '</td>' +
+                    '</tr>';
+                tablaUsuarios.innerHTML += nuevaFila;
+            }
+        } else {
+            // Mostrar un mensaje si no hay resultados
+            tablaUsuarios.innerHTML = '<tr><td colspan="6">No se encontraron resultados.</td></tr>';
+        }
+    }
+</script>
+
+
+
